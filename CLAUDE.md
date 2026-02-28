@@ -195,6 +195,59 @@ UE5 专属（Enhanced Input）：`create_input_action`、`create_input_mapping_c
 
 ---
 
+## 执行效率原则
+
+> 以下原则来自实战优化，每次任务执行时必须遵守。
+
+### 原则 1：能力预检优先，编译后再启动编辑器
+
+**禁止「先启动编辑器 → 发现命令缺失 → 关闭重启」的反模式。**
+
+正确流程：
+1. 用 `get_capabilities` 检查可用命令（对比 CLAUDE.md 命令列表）
+2. 发散预测：除直接需求外，预测接下来 1-2 步可能用到的命令
+3. 全部缺失命令统一实现 → 一次 full_rebuild → 再启动编辑器
+
+| 用户需求 | 发散预测应额外准备的能力 |
+|---------|----------------------|
+| 打开动画蓝图 | create_montage / add_anim_notify / edit_anim_curve |
+| 创建角色 BP | SkeletalMesh 组件 / 输入绑定 / 碰撞设置 |
+| 创建关卡 | 光照 / SkyAtmosphere / NavMesh |
+| 创建 Widget | 事件绑定 / 数据绑定 / 动画 |
+
+### 原则 2：编译层级快速判定（跳过 LiveCoding 评估）
+
+新增 MCP 命令 ≈ 必然涉及 `RegisterCommands()` 注册，**直接走 Tier 4，不需要逐级评估**：
+
+```
+涉及 RegisterCommands / .h 变更 / 新类 / Build.cs？
+  → 是 → 直接 full_rebuild（Tier 4），跳过 LiveCoding 考虑
+  → 否（仅函数体） → trigger_hot_reload（Tier 3）
+```
+
+多处 C++ 变更合并为**一次** full_rebuild，不分多轮编译。
+
+### 原则 3：会话缓存，不重复探测
+
+Step 0 执行一次后，以下内容全程复用，不再重复查询：
+- TCP 协议字段：`"type"`（不是 `"command"`）
+- 可用命令集：来自 `get_capabilities` 的缓存
+- 项目路径 / UBT target 名
+
+### 原则 4：批处理优先
+
+多个独立的只读 MCP 查询必须合并为一次 `batch` 调用：
+```python
+# 正确：1次往返
+send_cmd("batch", {"commands": [
+    {"type": "get_current_level_name", "params": {}},
+    {"type": "get_world_settings", "params": {}},
+    {"type": "get_actors_in_level", "params": {}}
+]})
+```
+
+---
+
 ## 开发规范
 
 ### 新增 C++ 命令
