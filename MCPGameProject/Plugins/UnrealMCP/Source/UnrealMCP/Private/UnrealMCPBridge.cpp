@@ -61,6 +61,11 @@
 #include "Commands/UnrealMCPLevelCommands.h"
 #include "Commands/UnrealMCPAssetCommands.h"
 #include "Commands/UnrealMCPDiagnosticsCommands.h"
+// Settings and editor menu
+#include "UnrealMCPSettings.h"
+#include "ToolMenus.h"
+
+#define LOCTEXT_NAMESPACE "UnrealMCP"
 
 // Default settings
 #define MCP_SERVER_HOST "127.0.0.1"
@@ -110,16 +115,30 @@ UUnrealMCPBridge::~UUnrealMCPBridge()
 void UUnrealMCPBridge::Initialize(FSubsystemCollectionBase& Collection)
 {
     UE_LOG(LogTemp, Display, TEXT("UnrealMCPBridge: Initializing"));
-    
+
     bIsRunning = false;
     ListenerSocket = nullptr;
     ConnectionSocket = nullptr;
     ServerThread = nullptr;
-    Port = MCP_SERVER_PORT;
     FIPv4Address::Parse(MCP_SERVER_HOST, ServerAddress);
 
-    // Start the server automatically
-    StartServer();
+    // Read port from settings (falls back to compile-time default if config missing)
+    const UUnrealMCPSettings* Settings = GetDefault<UUnrealMCPSettings>();
+    Port = static_cast<uint16>(Settings->Port);
+
+    // Register editor Tools menu (deferred until ToolMenus system is ready)
+    UToolMenus::RegisterStartupCallback(
+        FSimpleMulticastDelegate::FDelegate::CreateUObject(this, &UUnrealMCPBridge::RegisterMenus));
+
+    // Conditionally auto-start based on settings
+    if (Settings->bAutoStartServer)
+    {
+        StartServer();
+    }
+    else
+    {
+        UE_LOG(LogTemp, Display, TEXT("UnrealMCPBridge: Auto-start disabled — use Tools > UnrealMCP > MCP Server to start"));
+    }
 }
 
 // Clean up resources when subsystem is destroyed
@@ -127,6 +146,51 @@ void UUnrealMCPBridge::Deinitialize()
 {
     UE_LOG(LogTemp, Display, TEXT("UnrealMCPBridge: Shutting down"));
     StopServer();
+
+    // Unregister startup callback and remove all menus owned by this subsystem
+    UToolMenus::UnRegisterStartupCallback(this);
+    if (UToolMenus* ToolMenus = UToolMenus::TryGet())
+    {
+        ToolMenus->UnregisterOwner(this);
+    }
+}
+
+// Register the "Tools > UnrealMCP" menu section
+void UUnrealMCPBridge::RegisterMenus()
+{
+    // All entries registered here are owned by this subsystem and auto-removed on Deinitialize
+    FToolMenuOwnerScoped OwnerScoped(this);
+
+    UToolMenu* Menu = UToolMenus::Get()->ExtendMenu("MainFrame.MainMenu.Tools");
+    FToolMenuSection& Section = Menu->AddSection("UnrealMCPSection", LOCTEXT("UnrealMCPHeading", "UnrealMCP"));
+
+    Section.AddMenuEntry(
+        "ToggleMCPServer",
+        LOCTEXT("ToggleMCPServer", "MCP Server"),
+        LOCTEXT("ToggleMCPServerTip", "Start or stop the MCP TCP server (port 55557). Configure in Project Settings > Plugins > UnrealMCP."),
+        FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.Toolbar.Settings"),
+        FUIAction(
+            FExecuteAction::CreateUObject(this, &UUnrealMCPBridge::ToggleServer),
+            FCanExecuteAction(),
+            FIsActionChecked::CreateUObject(this, &UUnrealMCPBridge::IsRunning)
+        ),
+        EUserInterfaceActionType::ToggleButton
+    );
+}
+
+// Toggle the MCP server on / off
+void UUnrealMCPBridge::ToggleServer()
+{
+    if (bIsRunning)
+    {
+        StopServer();
+    }
+    else
+    {
+        // Re-read port from settings in case it changed since last start
+        Port = static_cast<uint16>(GetDefault<UUnrealMCPSettings>()->Port);
+        StartServer();
+    }
 }
 
 // Start the MCP server
@@ -404,3 +468,5 @@ TSharedPtr<FJsonObject> UUnrealMCPBridge::ExecuteBatchCommand(const TSharedPtr<F
     BatchResult->SetNumberField(TEXT("count"), static_cast<double>(Results.Num()));
     return BatchResult;
 }
+
+#undef LOCTEXT_NAMESPACE

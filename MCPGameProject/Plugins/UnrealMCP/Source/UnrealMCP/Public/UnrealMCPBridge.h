@@ -54,6 +54,10 @@ public:
 	FString ExecuteCommand(const FString& CommandType, const TSharedPtr<FJsonObject>& Params);
 
 private:
+	// Editor menu integration
+	void RegisterMenus();
+	void ToggleServer();
+
 	// Server state
 	bool bIsRunning;
 	TSharedPtr<FSocket> ListenerSocket;
