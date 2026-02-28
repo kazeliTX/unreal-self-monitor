@@ -16,6 +16,11 @@
 #include "Engine/SpotLight.h"
 #include "Camera/CameraActor.h"
 #include "Components/StaticMeshComponent.h"
+#include "Engine/SkyLight.h"
+#include "Engine/ExponentialHeightFog.h"
+#if ENGINE_MAJOR_VERSION > 4 || (ENGINE_MAJOR_VERSION == 4 && ENGINE_MINOR_VERSION >= 26)
+#include "Engine/SkyAtmosphere.h"
+#endif
 #include "EditorSubsystem.h"
 #if ENGINE_MAJOR_VERSION >= 5
 #include "Subsystems/EditorActorSubsystem.h"
@@ -246,6 +251,22 @@ TSharedPtr<FJsonObject> FUnrealMCPEditorCommands::HandleSpawnActor(const TShared
     {
         NewActor = World->SpawnActor<ACameraActor>(ACameraActor::StaticClass(), Location, Rotation, SpawnParams);
     }
+    else if (ActorType == TEXT("SkyLight"))
+    {
+        NewActor = World->SpawnActor<ASkyLight>(ASkyLight::StaticClass(), Location, Rotation, SpawnParams);
+    }
+    else if (ActorType == TEXT("SkyAtmosphere"))
+    {
+#if ENGINE_MAJOR_VERSION > 4 || (ENGINE_MAJOR_VERSION == 4 && ENGINE_MINOR_VERSION >= 26)
+        NewActor = World->SpawnActor<ASkyAtmosphere>(ASkyAtmosphere::StaticClass(), Location, Rotation, SpawnParams);
+#else
+        return FUnrealMCPCommonUtils::CreateErrorResponse(TEXT("SkyAtmosphere requires UE 4.26+"));
+#endif
+    }
+    else if (ActorType == TEXT("ExponentialHeightFog"))
+    {
+        NewActor = World->SpawnActor<AExponentialHeightFog>(AExponentialHeightFog::StaticClass(), Location, Rotation, SpawnParams);
+    }
     else
     {
         return FUnrealMCPCommonUtils::CreateErrorResponse(FString::Printf(TEXT("Unknown actor type: %s"), *ActorType));
@@ -419,17 +440,36 @@ TSharedPtr<FJsonObject> FUnrealMCPEditorCommands::HandleSetActorProperty(const T
     
     TSharedPtr<FJsonValue> PropertyValue = Params->Values.FindRef(TEXT("property_value"));
     
-    // Set the property using our utility function
+    // Try to set the property on the actor first, then fall back to components
     FString ErrorMessage;
-    if (FUnrealMCPCommonUtils::SetObjectProperty(TargetActor, PropertyName, PropertyValue, ErrorMessage))
+    bool bFound = FUnrealMCPCommonUtils::SetObjectProperty(TargetActor, PropertyName, PropertyValue, ErrorMessage);
+    FString ComponentName;
+
+    if (!bFound)
     {
-        // Property set successfully
+        // Fallback: search all components for the property
+        for (UActorComponent* Comp : TargetActor->GetComponents())
+        {
+            FString CompError;
+            if (Comp && FUnrealMCPCommonUtils::SetObjectProperty(Comp, PropertyName, PropertyValue, CompError))
+            {
+                bFound = true;
+                ComponentName = Comp->GetName();
+                break;
+            }
+        }
+    }
+
+    if (bFound)
+    {
         TSharedPtr<FJsonObject> ResultObj = MakeShared<FJsonObject>();
         ResultObj->SetStringField(TEXT("actor"), ActorName);
         ResultObj->SetStringField(TEXT("property"), PropertyName);
         ResultObj->SetBoolField(TEXT("success"), true);
-        
-        // Also include the full actor details
+        if (!ComponentName.IsEmpty())
+        {
+            ResultObj->SetStringField(TEXT("component"), ComponentName);
+        }
         ResultObj->SetObjectField(TEXT("actor_details"), FUnrealMCPCommonUtils::ActorToJsonObject(TargetActor, true));
         return ResultObj;
     }
@@ -512,6 +552,18 @@ TSharedPtr<FJsonObject> FUnrealMCPEditorCommands::HandleSpawnBlueprintActor(cons
     if (!World)
     {
         return FUnrealMCPCommonUtils::CreateErrorResponse(TEXT("Failed to get editor world"));
+    }
+
+    // Check for duplicate actor name to prevent editor crash
+    TArray<AActor*> AllActors;
+    UGameplayStatics::GetAllActorsOfClass(World, AActor::StaticClass(), AllActors);
+    for (AActor* Actor : AllActors)
+    {
+        if (Actor && Actor->GetName() == ActorName)
+        {
+            return FUnrealMCPCommonUtils::CreateErrorResponse(
+                FString::Printf(TEXT("Actor with name '%s' already exists"), *ActorName));
+        }
     }
 
     FTransform SpawnTransform;

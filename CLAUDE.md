@@ -152,7 +152,7 @@ TCP 连接 → UnrealMCPBridge::ExecuteCommand()
 UE5 专属（Enhanced Input）：`create_input_action`、`create_input_mapping_context`、`add_input_mapping`、`set_input_action_type`
 
 ### LevelCommands
-`new_level`、`open_level`、`save_current_level`、`save_all_levels`、`get_current_level_name`
+`new_level`、`open_level`、`save_current_level`、`save_all_levels`、`get_current_level_name`、`get_level_dirty_state`
 
 ### AssetCommands
 **浏览**：`list_assets`、`find_asset`、`does_asset_exist`、`get_asset_info`
@@ -182,11 +182,11 @@ UE5 专属（Enhanced Input）：`create_input_action`、`create_input_mapping_c
 | `node_tools.py` | 节点图操作 |
 | `umg_tools.py` | Widget Blueprint 工具 |
 | `project_tools.py` | 输入/控制台命令/项目设置 |
-| `level_tools.py` | 关卡管理 |
+| `level_tools.py` | 关卡管理（含 `get_level_dirty_state`、`safe_switch_level`） |
 | `asset_tools.py` | 资产/DataTable 管理 |
 | `log_tools.py` | UE 日志读取/分析（直接读文件，crash-safe） |
 | `diagnostics_tools.py` | 截图/相机/Actor 屏幕坐标/场景快照 |
-| `compile_tools.py` | C++/Python 文件读写/热重载（4层）/UBT |
+| `compile_tools.py` | C++/Python 文件读写/热重载（4层）/UBT/`kill_editor`/`full_rebuild` |
 | `system_tools.py` | 编辑器进程生命周期管理 |
 | `project_info_tools.py` | `get_project_info` / `get_engine_install_info` / `check_mcp_compatibility` |
 
@@ -269,4 +269,136 @@ python Python/scripts/install.py <target.uproject> --dry-run  # 预览安装
 mcp[cli]          # 必需：FastMCP 框架
 psutil>=5.9.0     # 可选：system_tools.py 进程检测
 Pillow>=10.0.0    # 可选：高级截图处理
+```
+
+---
+
+## 已知问题与经验（实战记录）
+
+> 详见 `References/Notes/2026-02-28_外部项目学习.md`
+
+### ⚠️ 问题1：new_level / open_level 触发 "Save current changes?" 弹框
+
+**现象**：`new_level`/`open_level` 在切换关卡时，若当前关卡有未保存修改，UE 弹出模态保存对话框。
+**解决方案**：C++ 侧在切换前调用 `SilentSaveAllDirtyPackages()`（`bPromptUserToSave=false`），自动静默保存所有 map + content 包。`/Temp/` 包无磁盘路径时自动跳过。
+**我们的状态**：`LevelCommands` 已有此机制，外部项目已验证有效。
+
+### ⚠️ 问题2：save_current_level 对临时关卡触发 "Save As" 弹框
+
+**现象**：`new_level`（无 `asset_path`）创建 `/Temp/Untitled` 关卡后，`save_current_level` 触发模态 Save As 对话框，期间所有 MCP TCP 请求超时（约 15s）。
+**解决方案**：
+1. C++ 侧检测 `/Temp/` 路径并立即返回错误（不调用 SaveCurrentLevel）
+2. Python 侧：`get_level_dirty_state` 检查 `is_temp`，若是临时关卡跳过保存
+3. 推荐：用 `safe_switch_level` 替代直接调用 `new_level`/`open_level`
+
+### ⚠️ 问题3：spawn_blueprint_actor 重名 Actor 导致编辑器 Crash
+
+**现象**：`actor_name` 在关卡中已存在时，UE 在 `LevelActor.cpp:585` 触发 Fatal Error。
+**修复**：在 `HandleSpawnBlueprintActor` 中添加与 `HandleSpawnActor` 相同的重名检查。
+**Python 防御**：`actor_name` 加时间戳或序号后缀保证唯一性。
+
+### ⚠️ 问题4：启动编辑器时出现 "Rebuild modules?" 弹框
+
+**现象**：修改 C++ 源码后直接启动编辑器，若 .dll 比源码旧，UE 弹出 GUI 重编译询问弹框。
+**解决方案**：先用 UBT 预编译（命令行静默无弹框），再启动编辑器：
+```bash
+dotnet "<engine_root>/Engine/Binaries/DotNET/UnrealBuildTool/UnrealBuildTool.dll" \
+    <ProjectName>Editor Win64 Development \
+    -Project="<project_root>/<project>.uproject" -WaitMutex
+```
+
+### ⚠️ 问题5：full_rebuild 后出现 "Recover Packages?" 弹框
+
+**现象**：强制杀掉编辑器后重启，UE 检测到 `PackageRestoreData.json` 并弹出恢复对话框。
+**解决方案**：Kill 编辑器后、启动前，删除：
+- `<project_root>/Saved/Autosaves/PackageRestoreData.json`（停止弹框的关键）
+- `<project_root>/Saved/Autosaves/Temp/`（不可恢复的临时关卡自动保存）
+
+### ⚠️ 问题6：新增 MCP 命令后 LiveCoding 热重载无效
+
+**现象**：`RegisterCommands()` 在模块初始化时调用，LiveCoding 仅更新函数体，不重新注册命令。新增命令必须 `full_rebuild`。
+**四层编译策略**：
+- Tier1 `compile_blueprint`（即时）→ 蓝图逻辑变更
+- Tier2 `reload_python_tool`（即时）→ Python 工具变更
+- Tier3 `trigger_hot_reload`（5-60s）→ C++ 函数体变更（**不适用于新命令注册**）
+- Tier4 `full_rebuild`（数分钟）→ **新 MCP 命令、.h 头文件、类结构、Build.cs 变更**
+
+---
+
+## Python MCP 工具编写规范
+
+> 来自上游项目 copilot-instructions（已验证最佳实践）
+
+所有带 `@mcp.tool()` 装饰器的函数必须遵守：
+
+1. **禁止的参数类型**：`Any`、`object`、`Optional[T]`、`Union[T]`
+2. **有默认值的参数**：用 `x: T = None`，不用 `x: T | None = None`，在函数体内处理默认值
+3. **必须有 docstring**：包含参数说明和有效输入示例
+
+```python
+# ✅ 正确
+@mcp.tool()
+def my_tool(ctx: Context, name: str, count: int = 0) -> Dict[str, Any]:
+    """Do something. Args: name: Actor name (e.g. 'Cube_01'). count: repeat count."""
+    if count == 0:
+        count = 1  # handle default in body
+    ...
+
+# ❌ 错误
+@mcp.tool()
+def my_tool(ctx: Context, name: str, count: Optional[int] = None) -> Dict[str, Any]:
+    ...
+```
+
+---
+
+## spawn_actor 支持的 actor_type
+
+除基础类型外，以下类型已验证（外部项目实战）：
+
+| actor_type | 类 | 备注 |
+|------------|-----|------|
+| `StaticMeshActor` | AStaticMeshActor | 默认 |
+| `PointLight` | APointLight | 点光源 |
+| `SpotLight` | ASpotLight | 聚光灯 |
+| `DirectionalLight` | ADirectionalLight | 平行光 |
+| `CameraActor` | ACameraActor | 摄像机 |
+| `SkyLight` | ASkyLight | 天空光 |
+| `SkyAtmosphere` | ASkyAtmosphere | 大气散射（UE 4.26+） |
+| `ExponentialHeightFog` | AExponentialHeightFog | 指数高度雾 |
+
+**关键**：`spawn_actor` 创建 `DirectionalLight` 后，必须显式设置 `bAtmosphereSunLight=true`，否则 SkyAtmosphere 不连接到方向光，场景渲染为黑色：
+```python
+set_actor_property(name="Sun_Light", property_name="bAtmosphereSunLight", property_value=True)
+```
+
+---
+
+## set_actor_property 组件属性回落机制
+
+`HandleSetActorProperty` 已实现：先在 Actor 本身查找属性，找不到时自动遍历所有 `UActorComponent` 查找。响应中包含 `"component": "ComponentName"` 字段（如 `"LightComponent0"`）。
+
+---
+
+## Skill 系统
+
+在 `.claude/skills/<skill-name>/SKILL.md` 中定义可复用工作流。触发词在文件顶部 YAML frontmatter 中指定。当前 Skill：
+
+| Skill | 触发词 |
+|-------|--------|
+| `create-basic-lighting-level` | "新建关卡并添加基础光照"、"set up basic lighting"、"create outdoor scene" |
+
+---
+
+## safe_switch_level 推荐用法
+
+当需要切换关卡时，**始终优先使用 `safe_switch_level`** 而非直接调用 `new_level`/`open_level`：
+
+```python
+# 推荐：自动处理 dirty 状态，防止弹框
+safe_switch_level(asset_path="/Game/Maps/MyLevel")  # 切换到指定关卡
+safe_switch_level()  # 创建新空白关卡
+
+# 不推荐（除非明确知道当前关卡已保存）
+new_level(asset_path="/Game/Maps/MyLevel")
 ```

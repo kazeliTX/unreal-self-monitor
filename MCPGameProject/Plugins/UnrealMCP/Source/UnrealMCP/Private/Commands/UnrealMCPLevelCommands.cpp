@@ -23,6 +23,8 @@ void FUnrealMCPLevelCommands::RegisterCommands(FMCPCommandRegistry& Registry)
         [this](const TSharedPtr<FJsonObject>& P) { return HandleSaveAllLevels(P); });
     Registry.RegisterCommand(TEXT("get_current_level_name"),
         [this](const TSharedPtr<FJsonObject>& P) { return HandleGetCurrentLevelName(P); });
+    Registry.RegisterCommand(TEXT("get_level_dirty_state"),
+        [this](const TSharedPtr<FJsonObject>& P) { return HandleGetLevelDirtyState(P); });
 }
 
 TSharedPtr<FJsonObject> FUnrealMCPLevelCommands::HandleNewLevel(const TSharedPtr<FJsonObject>& Params)
@@ -30,6 +32,9 @@ TSharedPtr<FJsonObject> FUnrealMCPLevelCommands::HandleNewLevel(const TSharedPtr
     // Optional: asset_path for the new level (e.g. "/Game/Maps/MyLevel")
     FString AssetPath;
     bool bHasPath = Params->TryGetStringField(TEXT("asset_path"), AssetPath) && !AssetPath.IsEmpty();
+
+    // Silently save dirty packages before switching to prevent modal dialogs
+    SilentSaveAllDirtyPackages();
 
     bool bSuccess = false;
     if (bHasPath)
@@ -39,11 +44,9 @@ TSharedPtr<FJsonObject> FUnrealMCPLevelCommands::HandleNewLevel(const TSharedPtr
     }
     else
     {
-        // Create a default empty level (prompts if needed - use FEditorFileUtils)
-        bSuccess = FEditorFileUtils::SaveDirtyPackages(false, true, false, false, false, false);
-        bSuccess = true;
-        // Create new unsaved level
+        // Create a new unsaved (transient) level
         GEditor->CreateNewMapForEditing();
+        bSuccess = true;
     }
 
     if (!bSuccess && bHasPath)
@@ -58,7 +61,9 @@ TSharedPtr<FJsonObject> FUnrealMCPLevelCommands::HandleNewLevel(const TSharedPtr
     if (World)
     {
         Result->SetStringField(TEXT("level_name"), World->GetName());
+        FString PackageName = World->GetOutermost()->GetName();
         Result->SetStringField(TEXT("level_path"), World->GetPathName());
+        Result->SetBoolField(TEXT("is_temp"), PackageName.StartsWith(TEXT("/Temp/")));
     }
     return Result;
 }
@@ -70,6 +75,9 @@ TSharedPtr<FJsonObject> FUnrealMCPLevelCommands::HandleOpenLevel(const TSharedPt
     {
         return FUnrealMCPCommonUtils::CreateErrorResponse(TEXT("Missing 'asset_path' parameter"));
     }
+
+    // Silently save dirty packages before switching to prevent modal dialogs
+    SilentSaveAllDirtyPackages();
 
     bool bSuccess = UEditorLevelLibrary::LoadLevel(AssetPath);
     if (!bSuccess)
@@ -91,11 +99,23 @@ TSharedPtr<FJsonObject> FUnrealMCPLevelCommands::HandleOpenLevel(const TSharedPt
 
 TSharedPtr<FJsonObject> FUnrealMCPLevelCommands::HandleSaveCurrentLevel(const TSharedPtr<FJsonObject>& Params)
 {
+    UWorld* World = GEditor->GetEditorWorldContext().World();
+
+    // Detect /Temp/ levels – SaveCurrentLevel would trigger a modal "Save As" dialog
+    if (World)
+    {
+        FString PackageName = World->GetOutermost()->GetName();
+        if (PackageName.StartsWith(TEXT("/Temp/")))
+        {
+            return FUnrealMCPCommonUtils::CreateErrorResponse(
+                TEXT("Cannot save a temporary level (no file path). Use new_level with an asset_path first."));
+        }
+    }
+
     bool bSuccess = UEditorLevelLibrary::SaveCurrentLevel();
     if (!bSuccess)
     {
         // Fall back to FEditorFileUtils if the level has no saved path yet
-        UWorld* World = GEditor->GetEditorWorldContext().World();
         if (World && World->GetCurrentLevel())
         {
             bSuccess = FEditorFileUtils::SaveLevel(World->GetCurrentLevel());
@@ -107,7 +127,6 @@ TSharedPtr<FJsonObject> FUnrealMCPLevelCommands::HandleSaveCurrentLevel(const TS
         return FUnrealMCPCommonUtils::CreateErrorResponse(TEXT("Failed to save current level. The level may not have a file path yet."));
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetBoolField(TEXT("success"), true);
     if (World)
@@ -150,4 +169,35 @@ TSharedPtr<FJsonObject> FUnrealMCPLevelCommands::HandleGetCurrentLevelName(const
     Result->SetStringField(TEXT("level_path"), LevelPath);
     Result->SetStringField(TEXT("package_name"), PackageName);
     return Result;
+}
+
+TSharedPtr<FJsonObject> FUnrealMCPLevelCommands::HandleGetLevelDirtyState(const TSharedPtr<FJsonObject>& Params)
+{
+    UWorld* World = GEditor->GetEditorWorldContext().World();
+    if (!World)
+    {
+        return FUnrealMCPCommonUtils::CreateErrorResponse(TEXT("No editor world found"));
+    }
+
+    FString LevelName = World->GetName();
+    FString PackageName = World->GetOutermost()->GetName();
+    bool bIsTemp = PackageName.StartsWith(TEXT("/Temp/"));
+    bool bIsDirty = World->GetOutermost()->IsDirty();
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetBoolField(TEXT("success"), true);
+    Result->SetStringField(TEXT("level_name"), LevelName);
+    Result->SetStringField(TEXT("package_name"), PackageName);
+    Result->SetBoolField(TEXT("is_dirty"), bIsDirty);
+    Result->SetBoolField(TEXT("is_temp"), bIsTemp);
+    // safe_to_switch: true if we can switch without losing unsaveable changes
+    Result->SetBoolField(TEXT("safe_to_switch"), !bIsDirty || !bIsTemp);
+    return Result;
+}
+
+void FUnrealMCPLevelCommands::SilentSaveAllDirtyPackages()
+{
+    // bPromptUserToSave=false, bSaveMapPackages=true, bSaveContentPackages=true,
+    // bFastSave=false, bNotifyNoPackagesSaved=false, bCanBeDeclined=false
+    FEditorFileUtils::SaveDirtyPackages(false, true, true, false, false, false);
 }

@@ -22,4 +22,8 @@ private:
     TSharedPtr<FJsonObject> HandleSaveCurrentLevel(const TSharedPtr<FJsonObject>& Params);
     TSharedPtr<FJsonObject> HandleSaveAllLevels(const TSharedPtr<FJsonObject>& Params);
     TSharedPtr<FJsonObject> HandleGetCurrentLevelName(const TSharedPtr<FJsonObject>& Params);
+    TSharedPtr<FJsonObject> HandleGetLevelDirtyState(const TSharedPtr<FJsonObject>& Params);
+
+    /** Silently save all dirty packages without prompting the user. */
+    void SilentSaveAllDirtyPackages();
 };

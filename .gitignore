@@ -119,6 +119,9 @@ Thumbs.db
 # Project specific files
 MCPGAMEProject/Config/DefaultEditorPerProjectUserSettings.ini
 
+# Local Claude settings (contains real paths, must not be committed)
+.claude/settings.local.json
+
 # MCP specific files
 MCP/logs/
 MCP/temp/
