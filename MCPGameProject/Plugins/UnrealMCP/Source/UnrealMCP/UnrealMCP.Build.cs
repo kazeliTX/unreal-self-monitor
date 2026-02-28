@@ -11,6 +11,12 @@ public class UnrealMCP : ModuleRules
 		// IWYUSupport was introduced in UE5.5 and replaces the deprecated bEnforceIWYU.
 		// We set neither so the same Build.cs compiles on both UE4 and UE5.
 
+		// VS2022 14.44+ treats C4459 (local variable shadowing global declaration) as an error.
+		// This is triggered by the 'BufferSize' template parameter in StringConv.h, an engine
+		// header issue that affects every file using JSON serialization in this module.
+		// UE5.3+ renamed bEnableShadowVariableWarnings → ShadowVariableWarningLevel.
+		ShadowVariableWarningLevel = WarningLevel.Off;
+
 		PublicIncludePaths.AddRange(
 			new string[] {
 			}
