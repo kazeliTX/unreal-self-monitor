@@ -94,6 +94,7 @@ UUnrealMCPBridge::UUnrealMCPBridge()
     AssetCommands         = MakeShared<FUnrealMCPAssetCommands>();
     DiagnosticsCommands   = MakeShared<FUnrealMCPDiagnosticsCommands>();
     TestCommands          = MakeShared<FUnrealMCPTestCommands>();
+    MaterialCommands      = MakeShared<FUnrealMCPMaterialCommands>();
 
     // Each module self-registers into the registry.
     // To add a new command module: instantiate it and call RegisterCommands here.
@@ -106,6 +107,7 @@ UUnrealMCPBridge::UUnrealMCPBridge()
     AssetCommands->RegisterCommands(*CommandRegistry);
     DiagnosticsCommands->RegisterCommands(*CommandRegistry);
     TestCommands->RegisterCommands(*CommandRegistry);
+    MaterialCommands->RegisterCommands(*CommandRegistry);
 }
 
 UUnrealMCPBridge::~UUnrealMCPBridge()
@@ -120,6 +122,7 @@ UUnrealMCPBridge::~UUnrealMCPBridge()
     AssetCommands.Reset();
     DiagnosticsCommands.Reset();
     TestCommands.Reset();
+    MaterialCommands.Reset();
 }
 
 // Initialize subsystem

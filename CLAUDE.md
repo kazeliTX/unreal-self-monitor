@@ -159,6 +159,7 @@ UE5 专属（Enhanced Input）：`create_input_action`、`create_input_mapping_c
 **文件夹**：`create_folder`、`list_folders`、`delete_folder`
 **操作**：`duplicate_asset`、`rename_asset`、`delete_asset`、`save_asset`、`save_all_assets`
 **DataTable**：`create_data_table`、`add_data_table_row`、`get_data_table_rows`
+**编辑器**：`open_asset_editor`（在编辑器中打开任意资产，参数 `asset_path`）
 
 ### DiagnosticsCommands（Phase 2A）
 **视觉感知**：`get_viewport_camera_info`、`get_actor_screen_position`、`highlight_actor`
@@ -191,6 +192,59 @@ UE5 专属（Enhanced Input）：`create_input_action`、`create_input_mapping_c
 | `project_info_tools.py` | `get_project_info` / `get_engine_install_info` / `check_mcp_compatibility` |
 
 **编译四层**：Tier1 `compile_blueprint`（即时）→ Tier2 `reload_python_tool`（即时）→ Tier3 `trigger_hot_reload`（5-60s）→ Tier4 `run_ubt_build`（数分钟）
+
+---
+
+## 执行效率原则
+
+> 以下原则来自实战优化，每次任务执行时必须遵守。
+
+### 原则 1：能力预检优先，编译后再启动编辑器
+
+**禁止「先启动编辑器 → 发现命令缺失 → 关闭重启」的反模式。**
+
+正确流程：
+1. 用 `get_capabilities` 检查可用命令（对比 CLAUDE.md 命令列表）
+2. 发散预测：除直接需求外，预测接下来 1-2 步可能用到的命令
+3. 全部缺失命令统一实现 → 一次 full_rebuild → 再启动编辑器
+
+| 用户需求 | 发散预测应额外准备的能力 |
+|---------|----------------------|
+| 打开动画蓝图 | create_montage / add_anim_notify / edit_anim_curve |
+| 创建角色 BP | SkeletalMesh 组件 / 输入绑定 / 碰撞设置 |
+| 创建关卡 | 光照 / SkyAtmosphere / NavMesh |
+| 创建 Widget | 事件绑定 / 数据绑定 / 动画 |
+
+### 原则 2：编译层级快速判定（跳过 LiveCoding 评估）
+
+新增 MCP 命令 ≈ 必然涉及 `RegisterCommands()` 注册，**直接走 Tier 4，不需要逐级评估**：
+
+```
+涉及 RegisterCommands / .h 变更 / 新类 / Build.cs？
+  → 是 → 直接 full_rebuild（Tier 4），跳过 LiveCoding 考虑
+  → 否（仅函数体） → trigger_hot_reload（Tier 3）
+```
+
+多处 C++ 变更合并为**一次** full_rebuild，不分多轮编译。
+
+### 原则 3：会话缓存，不重复探测
+
+Step 0 执行一次后，以下内容全程复用，不再重复查询：
+- TCP 协议字段：`"type"`（不是 `"command"`）
+- 可用命令集：来自 `get_capabilities` 的缓存
+- 项目路径 / UBT target 名
+
+### 原则 4：批处理优先
+
+多个独立的只读 MCP 查询必须合并为一次 `batch` 调用：
+```python
+# 正确：1次往返
+send_cmd("batch", {"commands": [
+    {"type": "get_current_level_name", "params": {}},
+    {"type": "get_world_settings", "params": {}},
+    {"type": "get_actors_in_level", "params": {}}
+]})
+```
 
 ---
 
@@ -254,7 +308,8 @@ python Python/scripts/install.py <target.uproject> --dry-run  # 预览安装
 | Phase 1 | ✅ 完成 | 关卡/资产/DataTable/Actor/WorldSettings/Collision/蓝图查询/节点/UMG/Enhanced Input |
 | Phase 2A | ✅ 完成 | DiagnosticsCommands + log/diagnostics/compile/system Python 工具 |
 | Phase 2B | ✅ 完成 | TestCommands（validate_blueprint / run_level_validation） |
-| Phase 2C/D | 待实现 | 动画蓝图 / 材质 / Niagara / PIE |
+| Phase 2C 材质 | ✅ 完成 | MaterialCommands（6条命令）已实战验证：创建/属性/表达式节点/连线/编译 |
+| Phase 2D | 待实现 | 动画蓝图 / Niagara / PIE |
 | 可移植性 Phase C | ✅ 完成 | UUnrealMCPSettings + 编辑器 Tools 菜单 MCP 开关 |
 | 可移植性 Phase B P1 | ✅ 完成 | UnrealMCPCompat.h + Build.cs UE4/5 分支 + Enhanced Input 条件编译 |
 | 可移植性 Phase A | ✅ 完成 | `install.py` 一键迁移脚本（UE4.22+/UE5，源码/Launcher 双支持） |
@@ -333,6 +388,37 @@ dotnet "<engine_root>/Engine/Binaries/DotNET/UnrealBuildTool/UnrealBuildTool.dll
 4. `TActorIterator` 缺少 `#include "EngineUtils.h"` → 已补全
 
 **详见**：`References/Notes/2026-02-28_UE5.6-编译兼容性修复.md`
+
+### ⚠️ 问题8：手写 TCP 测试脚本超时——字段名 `"type"` 不是 `"command"`
+
+**现象**：Python 直接发送 `{"command": "ping", "params": {}}` 后连接超时，无响应。
+**根因**：`MCPServerRunnable::Run()` 解析 `"type"` 字段（`TryGetStringField(TEXT("type"), ...)`），`"command"` 字段被忽略，服务器不发送任何回复。
+**解决方案**：手写测试脚本必须用 `"type"` 字段：
+```python
+payload = json.dumps({"type": "ping", "params": {}}).encode("utf-8")
+```
+`unreal_mcp_server.py` 的 `send_command()` 已正确使用 `"type"`，Python 工具层无需改动。
+
+### ⚠️ 问题9：Windows bash 下 `taskkill /F /IM` 无法杀死 UE 进程
+
+**现象**：bash 中运行 `taskkill /F /IM UnrealEditor.exe` 命令执行不报错，但进程依然存在。
+**根因**：bash 环境（Git Bash / MinGW）对 `/F`、`/IM` 等 Windows 路径式参数存在解析差异。
+**解决方案**：改用 PowerShell：
+```bash
+powershell -Command "Stop-Process -Name UnrealEditor -Force -ErrorAction SilentlyContinue; Stop-Process -Name LiveCodingConsole -Force -ErrorAction SilentlyContinue"
+```
+
+### ⚠️ 问题10：外部项目 UBT target 名必须与 Target.cs 文件名一致
+
+**现象**：对 LyraStarterGame 运行 `LyraStarterGameEditor` 目标时 UBT 报错 `Couldn't find target rules file`。
+**根因**：UBT target 名来自 `Source/XxxEditor.Target.cs` 的文件名，LyraStarterGame 的编辑器 target 是 `LyraEditor`（`Source/LyraEditor.Target.cs`）。
+**解决方案**：安装前先检查 `<project>/Source/` 下的 `*.Target.cs` 文件，使用正确的目标名：
+```bash
+ls "<project_root>/Source/" | grep "Editor.Target"
+# → LyraEditor.Target.cs → target name: LyraEditor
+```
+
+**详见**：`References/Notes/2026-03-01_LyraStarterGame-MCP连接与open-asset-editor.md`
 
 ---
 

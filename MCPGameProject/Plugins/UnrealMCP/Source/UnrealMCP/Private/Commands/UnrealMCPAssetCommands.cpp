@@ -2,6 +2,11 @@
 #include "Commands/UnrealMCPCommonUtils.h"
 #include "EditorAssetLibrary.h"
 #if ENGINE_MAJOR_VERSION >= 5
+#include "Subsystems/AssetEditorSubsystem.h"
+#else
+#include "Toolkits/AssetEditorManager.h"
+#endif
+#if ENGINE_MAJOR_VERSION >= 5
 #include "AssetRegistry/AssetRegistryModule.h"
 #else
 #include "AssetRegistryModule.h"
@@ -57,6 +62,8 @@ void FUnrealMCPAssetCommands::RegisterCommands(FMCPCommandRegistry& Registry)
         [this](const TSharedPtr<FJsonObject>& P) { return HandleAddDataTableRow(P); });
     Registry.RegisterCommand(TEXT("get_data_table_rows"),
         [this](const TSharedPtr<FJsonObject>& P) { return HandleGetDataTableRows(P); });
+    Registry.RegisterCommand(TEXT("open_asset_editor"),
+        [this](const TSharedPtr<FJsonObject>& P) { return HandleOpenAssetEditor(P); });
 }
 
 // ---------------------------------------------------------------------------
@@ -590,5 +597,51 @@ TSharedPtr<FJsonObject> FUnrealMCPAssetCommands::HandleGetDataTableRows(const TS
     Result->SetArrayField(TEXT("rows"), RowArray);
     Result->SetNumberField(TEXT("count"), static_cast<double>(RowArray.Num()));
     Result->SetStringField(TEXT("row_struct"), DataTable->RowStruct ? DataTable->RowStruct->GetName() : TEXT("Unknown"));
+    return Result;
+}
+
+// ---------------------------------------------------------------------------
+// Asset Editor
+// ---------------------------------------------------------------------------
+
+TSharedPtr<FJsonObject> FUnrealMCPAssetCommands::HandleOpenAssetEditor(const TSharedPtr<FJsonObject>& Params)
+{
+    FString AssetPath;
+    if (!Params->TryGetStringField(TEXT("asset_path"), AssetPath))
+    {
+        return FUnrealMCPCommonUtils::CreateErrorResponse(TEXT("asset_path parameter is required"));
+    }
+
+    // Load the asset
+    UObject* Asset = UEditorAssetLibrary::LoadAsset(AssetPath);
+    if (!Asset)
+    {
+        return FUnrealMCPCommonUtils::CreateErrorResponse(
+            FString::Printf(TEXT("Asset not found or failed to load: %s"), *AssetPath));
+    }
+
+    // Open asset in its editor
+    bool bOpened = false;
+#if ENGINE_MAJOR_VERSION >= 5
+    UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
+    if (AssetEditorSubsystem)
+    {
+        bOpened = AssetEditorSubsystem->OpenEditorForAsset(Asset);
+    }
+#else
+    bOpened = FAssetEditorManager::Get().OpenEditorForAsset(Asset);
+#endif
+
+    if (!bOpened)
+    {
+        return FUnrealMCPCommonUtils::CreateErrorResponse(
+            FString::Printf(TEXT("Failed to open editor for asset: %s"), *AssetPath));
+    }
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("asset_path"), AssetPath);
+    Result->SetStringField(TEXT("asset_name"), Asset->GetName());
+    Result->SetStringField(TEXT("asset_class"), Asset->GetClass()->GetName());
+    Result->SetBoolField(TEXT("opened"), true);
     return Result;
 }
