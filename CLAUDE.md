@@ -258,6 +258,7 @@ python Python/scripts/install.py <target.uproject> --dry-run  # 预览安装
 | 可移植性 Phase B P1 | ✅ 完成 | UnrealMCPCompat.h + Build.cs UE4/5 分支 + Enhanced Input 条件编译 |
 | 可移植性 Phase A | ✅ 完成 | `install.py` 一键迁移脚本（UE4.22+/UE5，源码/Launcher 双支持） |
 | 可移植性 Phase P3 | ✅ 完成 | `project_info_tools.py`（get_project_info / check_mcp_compatibility） |
+| UE4.24 安装验证 | ✅ 完成 | 已在 UE4.24.2 自编译项目成功编译；所有 API 差异已用 #if ENGINE_MAJOR_VERSION 守卫（详见 References/Notes/2026-02-28_UE4-compat-fixes.md） |
 
 ---
 
