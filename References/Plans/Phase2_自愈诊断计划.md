@@ -709,7 +709,7 @@ def get_engine_path() -> str:
 
 **目标**：AI 能创建测试并获取结构化报告
 
-- [ ] C++: `validate_blueprint`, `run_level_validation`
+- [x] C++: `validate_blueprint`, `run_level_validation`
 - [ ] C++: `execute_python_in_ue`
 - [ ] Python: `diagnostics_tools.py` 测试部分（run_full_diagnostic, generate_test_report）
 - [ ] `scripts/debug_runner.py`

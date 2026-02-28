@@ -61,6 +61,7 @@
 #include "Commands/UnrealMCPLevelCommands.h"
 #include "Commands/UnrealMCPAssetCommands.h"
 #include "Commands/UnrealMCPDiagnosticsCommands.h"
+#include "Commands/UnrealMCPTestCommands.h"
 // Settings, editor menu, and cross-version compat macros
 #include "UnrealMCPSettings.h"
 #include "UnrealMCPCompat.h"
@@ -86,6 +87,7 @@ UUnrealMCPBridge::UUnrealMCPBridge()
     LevelCommands         = MakeShared<FUnrealMCPLevelCommands>();
     AssetCommands         = MakeShared<FUnrealMCPAssetCommands>();
     DiagnosticsCommands   = MakeShared<FUnrealMCPDiagnosticsCommands>();
+    TestCommands          = MakeShared<FUnrealMCPTestCommands>();
 
     // Each module self-registers into the registry.
     // To add a new command module: instantiate it and call RegisterCommands here.
@@ -97,6 +99,7 @@ UUnrealMCPBridge::UUnrealMCPBridge()
     LevelCommands->RegisterCommands(*CommandRegistry);
     AssetCommands->RegisterCommands(*CommandRegistry);
     DiagnosticsCommands->RegisterCommands(*CommandRegistry);
+    TestCommands->RegisterCommands(*CommandRegistry);
 }
 
 UUnrealMCPBridge::~UUnrealMCPBridge()
@@ -110,6 +113,7 @@ UUnrealMCPBridge::~UUnrealMCPBridge()
     LevelCommands.Reset();
     AssetCommands.Reset();
     DiagnosticsCommands.Reset();
+    TestCommands.Reset();
 }
 
 // Initialize subsystem
