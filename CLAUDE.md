@@ -308,7 +308,8 @@ python Python/scripts/install.py <target.uproject> --dry-run  # 预览安装
 | Phase 1 | ✅ 完成 | 关卡/资产/DataTable/Actor/WorldSettings/Collision/蓝图查询/节点/UMG/Enhanced Input |
 | Phase 2A | ✅ 完成 | DiagnosticsCommands + log/diagnostics/compile/system Python 工具 |
 | Phase 2B | ✅ 完成 | TestCommands（validate_blueprint / run_level_validation） |
-| Phase 2C/D | 待实现 | 动画蓝图 / 材质 / Niagara / PIE |
+| Phase 2C 材质 | ✅ 完成 | MaterialCommands（6条命令）已实战验证：创建/属性/表达式节点/连线/编译 |
+| Phase 2D | 待实现 | 动画蓝图 / Niagara / PIE |
 | 可移植性 Phase C | ✅ 完成 | UUnrealMCPSettings + 编辑器 Tools 菜单 MCP 开关 |
 | 可移植性 Phase B P1 | ✅ 完成 | UnrealMCPCompat.h + Build.cs UE4/5 分支 + Enhanced Input 条件编译 |
 | 可移植性 Phase A | ✅ 完成 | `install.py` 一键迁移脚本（UE4.22+/UE5，源码/Launcher 双支持） |
