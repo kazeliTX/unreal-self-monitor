@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "unrealMCP": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "C:/Users/kazeli/Desktop/unreal-mcp-main/unreal-mcp-main/Python",
+        "run",
+        "unreal_mcp_server.py"
+      ]
+    }
+  }
+}
