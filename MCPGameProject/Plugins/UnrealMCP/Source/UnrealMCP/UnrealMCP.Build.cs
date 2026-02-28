@@ -32,10 +32,15 @@ public class UnrealMCP : ModuleRules
 				"Sockets",
 				"HTTP",
 				"Json",
-				"JsonUtilities",
-				"DeveloperSettings"
+				"JsonUtilities"
 			}
 		);
+
+		// DeveloperSettings is part of the Engine module in UE4; it became its own module in UE5.
+		if (Target.Version.MajorVersion >= 5)
+		{
+			PublicDependencyModuleNames.Add("DeveloperSettings");
+		}
 
 		PrivateDependencyModuleNames.AddRange(
 			new string[]
