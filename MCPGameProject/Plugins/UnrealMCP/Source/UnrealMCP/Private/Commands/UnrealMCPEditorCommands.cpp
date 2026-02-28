@@ -209,7 +209,26 @@ TSharedPtr<FJsonObject> FUnrealMCPEditorCommands::HandleSpawnActor(const TShared
 
     if (ActorType == TEXT("StaticMeshActor"))
     {
-        NewActor = World->SpawnActor<AStaticMeshActor>(AStaticMeshActor::StaticClass(), Location, Rotation, SpawnParams);
+        AStaticMeshActor* SMActor = World->SpawnActor<AStaticMeshActor>(AStaticMeshActor::StaticClass(), Location, Rotation, SpawnParams);
+        if (SMActor && SMActor->GetStaticMeshComponent())
+        {
+            UStaticMeshComponent* SMComp = SMActor->GetStaticMeshComponent();
+
+            // Must be Movable to allow programmatic transform changes in editor
+            SMComp->SetMobility(EComponentMobility::Movable);
+
+            // Assign static mesh if provided (e.g. "/Engine/BasicShapes/Sphere.Sphere")
+            FString StaticMeshPath;
+            if (Params->TryGetStringField(TEXT("static_mesh"), StaticMeshPath))
+            {
+                UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, *StaticMeshPath);
+                if (Mesh)
+                {
+                    SMComp->SetStaticMesh(Mesh);
+                }
+            }
+        }
+        NewActor = SMActor;
     }
     else if (ActorType == TEXT("PointLight"))
     {
@@ -234,10 +253,8 @@ TSharedPtr<FJsonObject> FUnrealMCPEditorCommands::HandleSpawnActor(const TShared
 
     if (NewActor)
     {
-        // Set scale (since SpawnActor only takes location and rotation)
-        FTransform Transform = NewActor->GetTransform();
-        Transform.SetScale3D(Scale);
-        NewActor->SetActorTransform(Transform);
+        // Apply scale (location/rotation already set via SpawnActor params above)
+        NewActor->SetActorScale3D(Scale);
 
         // Return the created actor's details
         return FUnrealMCPCommonUtils::ActorToJsonObject(NewActor, true);
