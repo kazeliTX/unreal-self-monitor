@@ -275,7 +275,7 @@ Pillow>=10.0.0    # 可选：高级截图处理
 
 ## 已知问题与经验（实战记录）
 
-> 详见 `References/Notes/2026-02-28_外部项目学习.md`
+> 详见 `References/Notes/2026-02-28_处理虚幻编译弹窗等问题.md`
 
 ### ⚠️ 问题1：new_level / open_level 触发 "Save current changes?" 弹框
 
