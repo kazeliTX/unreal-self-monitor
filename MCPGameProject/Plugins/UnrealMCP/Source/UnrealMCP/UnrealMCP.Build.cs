@@ -66,7 +66,8 @@ public class UnrealMCP : ModuleRules
 				"LevelEditor",      // For level management commands
 				"GameplayTags",     // For tag operations
 				"LiveCoding",       // For hot-reload / compile status queries
-				"EngineSettings"    // For UGeneralProjectSettings
+				"EngineSettings",   // For UGeneralProjectSettings
+				"MaterialEditor"    // For UMaterialEditingLibrary (create/connect material expressions)
 			}
 		);
 

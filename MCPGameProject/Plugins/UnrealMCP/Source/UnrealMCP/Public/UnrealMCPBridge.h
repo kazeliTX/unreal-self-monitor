@@ -18,6 +18,7 @@
 #include "Commands/UnrealMCPAssetCommands.h"
 #include "Commands/UnrealMCPDiagnosticsCommands.h"
 #include "Commands/UnrealMCPTestCommands.h"
+#include "Commands/UnrealMCPMaterialCommands.h"
 #include "UnrealMCPBridge.generated.h"
 
 class FMCPServerRunnable;
@@ -82,6 +83,7 @@ private:
 	TSharedPtr<FUnrealMCPAssetCommands>          AssetCommands;
 	TSharedPtr<FUnrealMCPDiagnosticsCommands>    DiagnosticsCommands;
 	TSharedPtr<FUnrealMCPTestCommands>           TestCommands;
+	TSharedPtr<FUnrealMCPMaterialCommands>       MaterialCommands;
 
 	// Built-in special commands (not routed via registry)
 	TSharedPtr<FJsonObject> ExecuteBatchCommand(const TSharedPtr<FJsonObject>& Params);
