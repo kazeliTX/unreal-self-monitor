@@ -1,3 +1,9 @@
+// VS2022 14.44+ treats C4459 (variable shadowing global) as error in StringConv.h template.
+// Suppress for this file since it's an engine header issue, not our code.
+#ifdef _MSC_VER
+#pragma warning(disable: 4459)
+#endif
+
 #include "MCPServerRunnable.h"
 #include "UnrealMCPBridge.h"
 #include "Sockets.h"
@@ -96,7 +102,8 @@ uint32 FMCPServerRunnable::Run()
 
                                 // Send response
                                 int32 BytesSent = 0;
-                                if (!ClientSocket->Send((uint8*)TCHAR_TO_UTF8(*Response), Response.Len(), BytesSent))
+                                FTCHARToUTF8 Utf8Response(*Response);
+                                if (!ClientSocket->Send((const uint8*)Utf8Response.Get(), Utf8Response.Length(), BytesSent))
                                 {
                                     UE_LOG(LogTemp, Warning, TEXT("MCPServerRunnable: Failed to send response"));
                                 }
@@ -320,7 +327,8 @@ void FMCPServerRunnable::ProcessMessage(TSharedPtr<FSocket> Client, const FStrin
     
     UE_LOG(LogTemp, Display, TEXT("MCPServerRunnable: Sending response: %s"), *Response);
     
-    if (!Client->Send((uint8*)TCHAR_TO_UTF8(*Response), Response.Len(), BytesSent))
+    FTCHARToUTF8 Utf8Response(*Response);
+    if (!Client->Send((const uint8*)Utf8Response.Get(), Utf8Response.Length(), BytesSent))
     {
         UE_LOG(LogTemp, Error, TEXT("MCPServerRunnable: Failed to send response"));
     }

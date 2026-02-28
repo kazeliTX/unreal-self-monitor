@@ -2,6 +2,7 @@
 #include "Commands/UnrealMCPCommonUtils.h"
 
 #include "Editor.h"
+#include "EngineUtils.h"
 #include "Engine/World.h"
 #include "Engine/Blueprint.h"
 #include "Engine/BlueprintGeneratedClass.h"

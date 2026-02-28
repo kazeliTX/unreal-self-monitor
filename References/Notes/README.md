@@ -35,3 +35,4 @@
 | 2026-02-28 | UE4.24.2 源码编译参考工程信息快照（UE4 兼容验证目标） | [2026-02-28_UE4工程信息快照.md](./2026-02-28_UE4工程信息快照.md) |
 | 2026-02-28 | UE4 兼容性修复：Build.cs / Include 路径 / API 差异全表 | [2026-02-28_UE4-compat-fixes.md](./2026-02-28_UE4-compat-fixes.md) |
 | 2026-02-28 | 外部项目学习：get_level_dirty_state / safe_switch_level / full_rebuild / 关卡弹窗防御 | [2026-02-28_处理虚幻编译弹窗等问题.md](./2026-02-28_处理虚幻编译弹窗等问题.md) |
+| 2026-02-28 | UE5.6 + VS2022 14.44 编译失败：SkyAtmosphere 路径、WorldSettings.h、C4459、EngineUtils.h | [2026-02-28_UE5.6-编译兼容性修复.md](./2026-02-28_UE5.6-编译兼容性修复.md) |

@@ -19,7 +19,7 @@
 #include "Engine/SkyLight.h"
 #include "Engine/ExponentialHeightFog.h"
 #if ENGINE_MAJOR_VERSION > 4 || (ENGINE_MAJOR_VERSION == 4 && ENGINE_MINOR_VERSION >= 26)
-#include "Engine/SkyAtmosphere.h"
+#include "Components/SkyAtmosphereComponent.h"
 #endif
 #include "EditorSubsystem.h"
 #if ENGINE_MAJOR_VERSION >= 5
@@ -27,11 +27,7 @@
 #endif
 #include "Engine/Blueprint.h"
 #include "Engine/BlueprintGeneratedClass.h"
-#if ENGINE_MAJOR_VERSION >= 5
-#include "Engine/WorldSettings.h"
-#else
 #include "GameFramework/WorldSettings.h"
-#endif
 #include "GameFramework/GameModeBase.h"
 #include "ActorEditorUtils.h"
 

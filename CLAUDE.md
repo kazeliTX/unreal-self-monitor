@@ -323,6 +323,17 @@ dotnet "<engine_root>/Engine/Binaries/DotNET/UnrealBuildTool/UnrealBuildTool.dll
 - Tier3 `trigger_hot_reload`（5-60s）→ C++ 函数体变更（**不适用于新命令注册**）
 - Tier4 `full_rebuild`（数分钟）→ **新 MCP 命令、.h 头文件、类结构、Build.cs 变更**
 
+### ⚠️ 问题7：UE5.6 + VS2022 14.44 编译失败（三处兼容性问题）
+
+**现象**：安装到 UE5.6 / LyraStarterGame 时 UBT 编译失败。
+**根因与修复**：
+1. `Engine/SkyAtmosphere.h` 不存在 → 改用 `Components/SkyAtmosphereComponent.h`（`ASkyAtmosphere` 定义在此）
+2. `Engine/WorldSettings.h` 在 UE5.6 不存在 → 删除版本条件，统一用 `GameFramework/WorldSettings.h`
+3. VS2022 14.44 将 `StringConv.h` 中 C4459（`BufferSize` 遮蔽全局）升级为错误 → 在 `MCPServerRunnable.cpp` 头部加 `#pragma warning(disable: 4459)`；同时把 `TCHAR_TO_UTF8(*Response), Response.Len()` 改为 `FTCHARToUTF8 u(*Response); u.Get(), u.Length()` 修正字节长度
+4. `TActorIterator` 缺少 `#include "EngineUtils.h"` → 已补全
+
+**详见**：`References/Notes/2026-02-28_UE5.6-编译兼容性修复.md`
+
 ---
 
 ## Python MCP 工具编写规范
