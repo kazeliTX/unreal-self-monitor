@@ -1,8 +1,8 @@
 # UE4.24 兼容性修复记录
 
 **日期**: 2026-02-28
-**目标引擎**: 自编译 UE4.24.2（D:\kazeli_KAZELI-PC0_S1_1）
-**安装目标**: D:\kazeli_KAZELI-PC0_S1_1\NZMobile\Plugins\UnrealMCP\
+**目标引擎**: 自编译 UE4.24.2
+**安装目标**: 某 UE4 项目的 Plugins\UnrealMCP\
 
 ---
 
