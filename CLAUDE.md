@@ -159,6 +159,7 @@ UE5 专属（Enhanced Input）：`create_input_action`、`create_input_mapping_c
 **文件夹**：`create_folder`、`list_folders`、`delete_folder`
 **操作**：`duplicate_asset`、`rename_asset`、`delete_asset`、`save_asset`、`save_all_assets`
 **DataTable**：`create_data_table`、`add_data_table_row`、`get_data_table_rows`
+**编辑器**：`open_asset_editor`（在编辑器中打开任意资产，参数 `asset_path`）
 
 ### DiagnosticsCommands（Phase 2A）
 **视觉感知**：`get_viewport_camera_info`、`get_actor_screen_position`、`highlight_actor`
@@ -333,6 +334,37 @@ dotnet "<engine_root>/Engine/Binaries/DotNET/UnrealBuildTool/UnrealBuildTool.dll
 4. `TActorIterator` 缺少 `#include "EngineUtils.h"` → 已补全
 
 **详见**：`References/Notes/2026-02-28_UE5.6-编译兼容性修复.md`
+
+### ⚠️ 问题8：手写 TCP 测试脚本超时——字段名 `"type"` 不是 `"command"`
+
+**现象**：Python 直接发送 `{"command": "ping", "params": {}}` 后连接超时，无响应。
+**根因**：`MCPServerRunnable::Run()` 解析 `"type"` 字段（`TryGetStringField(TEXT("type"), ...)`），`"command"` 字段被忽略，服务器不发送任何回复。
+**解决方案**：手写测试脚本必须用 `"type"` 字段：
+```python
+payload = json.dumps({"type": "ping", "params": {}}).encode("utf-8")
+```
+`unreal_mcp_server.py` 的 `send_command()` 已正确使用 `"type"`，Python 工具层无需改动。
+
+### ⚠️ 问题9：Windows bash 下 `taskkill /F /IM` 无法杀死 UE 进程
+
+**现象**：bash 中运行 `taskkill /F /IM UnrealEditor.exe` 命令执行不报错，但进程依然存在。
+**根因**：bash 环境（Git Bash / MinGW）对 `/F`、`/IM` 等 Windows 路径式参数存在解析差异。
+**解决方案**：改用 PowerShell：
+```bash
+powershell -Command "Stop-Process -Name UnrealEditor -Force -ErrorAction SilentlyContinue; Stop-Process -Name LiveCodingConsole -Force -ErrorAction SilentlyContinue"
+```
+
+### ⚠️ 问题10：外部项目 UBT target 名必须与 Target.cs 文件名一致
+
+**现象**：对 LyraStarterGame 运行 `LyraStarterGameEditor` 目标时 UBT 报错 `Couldn't find target rules file`。
+**根因**：UBT target 名来自 `Source/XxxEditor.Target.cs` 的文件名，LyraStarterGame 的编辑器 target 是 `LyraEditor`（`Source/LyraEditor.Target.cs`）。
+**解决方案**：安装前先检查 `<project>/Source/` 下的 `*.Target.cs` 文件，使用正确的目标名：
+```bash
+ls "<project_root>/Source/" | grep "Editor.Target"
+# → LyraEditor.Target.cs → target name: LyraEditor
+```
+
+**详见**：`References/Notes/2026-03-01_LyraStarterGame-MCP连接与open-asset-editor.md`
 
 ---
 
