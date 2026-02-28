@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Unreal Engine](https://img.shields.io/badge/Unreal%20Engine-5.5%2B-orange)](https://www.unrealengine.com)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-yellow)](https://www.python.org)
-[![Status](https://img.shields.io/badge/Status-Experimental-red)](https://github.com/chongdashu/unreal-mcp)
+[![Status](https://img.shields.io/badge/Status-Experimental-red)](https://github.com/kazeliTX/unreal-self-monitor)
 
 </div>
 
@@ -241,4 +241,4 @@ MIT
 
 ## Questions
 
-For questions, reach out on X/Twitter: [@chongdashu](https://www.x.com/chongdashu)
+For questions, reach out on GitHub: [@kazeli](https://github.com/kazeliTX)
