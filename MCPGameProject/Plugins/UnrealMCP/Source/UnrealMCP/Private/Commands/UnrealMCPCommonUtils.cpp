@@ -19,7 +19,11 @@
 #include "UObject/UObjectIterator.h"
 #include "Engine/Selection.h"
 #include "EditorAssetLibrary.h"
+#if ENGINE_MAJOR_VERSION >= 5
 #include "AssetRegistry/AssetRegistryModule.h"
+#else
+#include "AssetRegistryModule.h"
+#endif
 #include "Engine/BlueprintGeneratedClass.h"
 #include "BlueprintNodeSpawner.h"
 #include "BlueprintActionDatabase.h"

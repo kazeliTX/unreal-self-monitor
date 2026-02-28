@@ -4,7 +4,11 @@
 #include "GameFramework/InputSettings.h"
 #include "Editor.h"
 #include "EditorAssetLibrary.h"
+#if ENGINE_MAJOR_VERSION >= 5
 #include "AssetRegistry/AssetRegistryModule.h"
+#else
+#include "AssetRegistryModule.h"
+#endif
 #include "AssetToolsModule.h"
 #include "IAssetTools.h"
 #include "Factories/Factory.h"

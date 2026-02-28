@@ -8,8 +8,11 @@
 #include "Engine/GameViewportClient.h"
 #include "SceneView.h"
 #include "EditorSubsystem.h"
+#if ENGINE_MAJOR_VERSION >= 5
 #include "Subsystems/EditorActorSubsystem.h"
+#endif
 #include "Engine/Selection.h"
+#include "EngineUtils.h"
 
 // HAL / IO
 #include "HAL/FileManager.h"

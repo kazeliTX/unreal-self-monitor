@@ -59,9 +59,16 @@ public class UnrealMCP : ModuleRules
 				"AssetTools",       // For IAssetTools (DataTable/InputAction creation)
 				"LevelEditor",      // For level management commands
 				"GameplayTags",     // For tag operations
-				"LiveCoding"        // For hot-reload / compile status queries
+				"LiveCoding",       // For hot-reload / compile status queries
+				"EngineSettings"    // For UGeneralProjectSettings
 			}
 		);
+
+		// EditorStyle module provides FEditorStyle in UE4; UE5 uses FAppStyle from Slate.
+		if (Target.Version.MajorVersion < 5)
+		{
+			PrivateDependencyModuleNames.Add("EditorStyle");
+		}
 
 		if (Target.bBuildEditor == true)
 		{

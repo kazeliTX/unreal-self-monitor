@@ -2,7 +2,11 @@
 #include "Commands/UnrealMCPCommonUtils.h"
 #include "Editor.h"
 #include "EditorAssetLibrary.h"
+#if ENGINE_MAJOR_VERSION >= 5
 #include "AssetRegistry/AssetRegistryModule.h"
+#else
+#include "AssetRegistryModule.h"
+#endif
 #include "Blueprint/UserWidget.h"
 #include "Components/TextBlock.h"
 #include "WidgetBlueprint.h"
@@ -97,7 +101,11 @@ TSharedPtr<FJsonObject> FUnrealMCPUMGCommands::HandleCreateUMGWidgetBlueprint(co
 	}
 
 	// Create package
+#if ENGINE_MAJOR_VERSION >= 5
 	UPackage* Package = CreatePackage(*FullPath);
+#else
+	UPackage* Package = CreatePackage(nullptr, *FullPath);
+#endif
 	if (!Package)
 	{
 		return FUnrealMCPCommonUtils::CreateErrorResponse(TEXT("Failed to create package"));
@@ -435,7 +443,7 @@ TSharedPtr<FJsonObject> FUnrealMCPUMGCommands::HandleBindWidgetEvent(const TShar
 		float MaxHeight = 0.0f;
 		for (UEdGraphNode* Node : EventGraph->Nodes)
 		{
-			MaxHeight = FMath::Max(MaxHeight, Node->NodePosY);
+			MaxHeight = FMath::Max(MaxHeight, (float)Node->NodePosY);
 		}
 		
 		const FVector2D NodePos(200, MaxHeight + 200);
@@ -703,9 +711,9 @@ TSharedPtr<FJsonObject> FUnrealMCPUMGCommands::HandleAddProgressBarToWidget(cons
 		return FUnrealMCPCommonUtils::CreateErrorResponse(TEXT("Failed to create ProgressBar widget"));
 
 	// Optional initial percent (0.0 - 1.0)
-	float Percent = 0.0f;
+	double Percent = 0.0;
 	Params->TryGetNumberField(TEXT("percent"), Percent);
-	Bar->SetPercent(Percent);
+	Bar->SetPercent((float)Percent);
 
 	UCanvasPanelSlot* Slot = RootCanvas->AddChildToCanvas(Bar);
 	if (Slot)
@@ -899,13 +907,13 @@ TSharedPtr<FJsonObject> FUnrealMCPUMGCommands::HandleSetWidgetAnchor(const TShar
 	if (!CanvasSlot)
 		return FUnrealMCPCommonUtils::CreateErrorResponse(FString::Printf(TEXT("Widget '%s' is not in a Canvas Panel"), *WidgetName));
 
-	float MinX = 0.0f, MinY = 0.0f, MaxX = 0.0f, MaxY = 0.0f;
+	double MinX = 0.0, MinY = 0.0, MaxX = 0.0, MaxY = 0.0;
 	Params->TryGetNumberField(TEXT("min_x"), MinX);
 	Params->TryGetNumberField(TEXT("min_y"), MinY);
 	Params->TryGetNumberField(TEXT("max_x"), MaxX);
 	Params->TryGetNumberField(TEXT("max_y"), MaxY);
 
-	FAnchors Anchors(MinX, MinY, MaxX, MaxY);
+	FAnchors Anchors((float)MinX, (float)MinY, (float)MaxX, (float)MaxY);
 	CanvasSlot->SetAnchors(Anchors);
 
 	WB->MarkPackageDirty();

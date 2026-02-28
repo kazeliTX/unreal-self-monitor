@@ -16,7 +16,11 @@
 #include "Engine/SpotLight.h"
 #include "Camera/CameraActor.h"
 #include "EditorAssetLibrary.h"
+#if ENGINE_MAJOR_VERSION >= 5
 #include "AssetRegistry/AssetRegistryModule.h"
+#else
+#include "AssetRegistryModule.h"
+#endif
 #include "JsonObjectConverter.h"
 #include "GameFramework/Actor.h"
 #include "Engine/Selection.h"
@@ -49,7 +53,9 @@
 #include "K2Node_Self.h"
 #include "GameFramework/InputSettings.h"
 #include "EditorSubsystem.h"
+#if ENGINE_MAJOR_VERSION >= 5
 #include "Subsystems/EditorActorSubsystem.h"
+#endif
 // Command registry and handler modules
 #include "MCPCommandRegistry.h"
 #include "Commands/UnrealMCPEditorCommands.h"

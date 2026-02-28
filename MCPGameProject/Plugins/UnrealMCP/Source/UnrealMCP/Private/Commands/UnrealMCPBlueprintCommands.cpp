@@ -18,8 +18,16 @@
 #include "UObject/Field.h"
 #include "UObject/FieldPath.h"
 #include "EditorAssetLibrary.h"
+#if ENGINE_MAJOR_VERSION >= 5
 #include "AssetRegistry/AssetRegistryModule.h"
+#else
+#include "AssetRegistryModule.h"
+#endif
+#if ENGINE_MAJOR_VERSION >= 5
 #include "AssetRegistry/IAssetRegistry.h"
+#else
+#include "IAssetRegistry.h"
+#endif
 #include "GameFramework/Actor.h"
 #include "GameFramework/Pawn.h"
 
@@ -149,7 +157,11 @@ TSharedPtr<FJsonObject> FUnrealMCPBlueprintCommands::HandleCreateBlueprint(const
     Factory->ParentClass = SelectedParentClass;
 
     // Create the blueprint
+#if ENGINE_MAJOR_VERSION >= 5
     UPackage* Package = CreatePackage(*(PackagePath + AssetName));
+#else
+    UPackage* Package = CreatePackage(nullptr, *(PackagePath + AssetName));
+#endif
     UBlueprint* NewBlueprint = Cast<UBlueprint>(Factory->FactoryCreateNew(UBlueprint::StaticClass(), Package, *AssetName, RF_Standalone | RF_Public, nullptr, GWarn));
 
     if (NewBlueprint)
@@ -1305,7 +1317,11 @@ TSharedPtr<FJsonObject> FUnrealMCPBlueprintCommands::HandleListBlueprints(const 
     for (const FString& AssetPath : AssetPaths)
     {
         FAssetData AssetData = UEditorAssetLibrary::FindAssetData(AssetPath);
+#if ENGINE_MAJOR_VERSION >= 5
         FString AssetClass = AssetData.IsValid() ? AssetData.AssetClassPath.GetAssetName().ToString() : TEXT("");
+#else
+        FString AssetClass = AssetData.IsValid() ? AssetData.AssetClass.ToString() : TEXT("");
+#endif
 
         if (AssetClass == TEXT("Blueprint") || AssetClass == TEXT("AnimBlueprint") || AssetClass == TEXT("WidgetBlueprint"))
         {

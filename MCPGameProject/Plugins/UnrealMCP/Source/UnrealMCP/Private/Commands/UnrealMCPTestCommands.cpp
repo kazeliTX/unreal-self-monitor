@@ -13,7 +13,11 @@
 #include "Components/StaticMeshComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/Actor.h"
+#if ENGINE_MAJOR_VERSION >= 5
 #include "AssetRegistry/AssetRegistryModule.h"
+#else
+#include "AssetRegistryModule.h"
+#endif
 #include "Kismet2/CompilerResultsLog.h"
 #include "UnrealMCPCompat.h"
 

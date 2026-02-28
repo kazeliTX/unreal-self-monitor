@@ -1,8 +1,16 @@
 #include "Commands/UnrealMCPAssetCommands.h"
 #include "Commands/UnrealMCPCommonUtils.h"
 #include "EditorAssetLibrary.h"
+#if ENGINE_MAJOR_VERSION >= 5
 #include "AssetRegistry/AssetRegistryModule.h"
+#else
+#include "AssetRegistryModule.h"
+#endif
+#if ENGINE_MAJOR_VERSION >= 5
 #include "AssetRegistry/IAssetRegistry.h"
+#else
+#include "IAssetRegistry.h"
+#endif
 #include "AssetToolsModule.h"
 #include "IAssetTools.h"
 #include "Engine/DataTable.h"
@@ -80,7 +88,11 @@ TSharedPtr<FJsonObject> FUnrealMCPAssetCommands::HandleListAssets(const TSharedP
             FAssetData AssetData = UEditorAssetLibrary::FindAssetData(AssetPath);
             if (AssetData.IsValid())
             {
+#if ENGINE_MAJOR_VERSION >= 5
                 FString AssetClass = AssetData.AssetClassPath.GetAssetName().ToString();
+#else
+                FString AssetClass = AssetData.AssetClass.ToString();
+#endif
                 if (!AssetClass.Contains(ClassFilter))
                 {
                     continue;
@@ -95,7 +107,11 @@ TSharedPtr<FJsonObject> FUnrealMCPAssetCommands::HandleListAssets(const TSharedP
         if (AssetData.IsValid())
         {
             AssetObj->SetStringField(TEXT("name"), AssetData.AssetName.ToString());
+#if ENGINE_MAJOR_VERSION >= 5
             AssetObj->SetStringField(TEXT("class"), AssetData.AssetClassPath.GetAssetName().ToString());
+#else
+            AssetObj->SetStringField(TEXT("class"), AssetData.AssetClass.ToString());
+#endif
             AssetObj->SetStringField(TEXT("package"), AssetData.PackageName.ToString());
         }
 
@@ -133,7 +149,11 @@ TSharedPtr<FJsonObject> FUnrealMCPAssetCommands::HandleFindAsset(const TSharedPt
             if (AssetData.IsValid())
             {
                 AssetObj->SetStringField(TEXT("name"), AssetData.AssetName.ToString());
+#if ENGINE_MAJOR_VERSION >= 5
                 AssetObj->SetStringField(TEXT("class"), AssetData.AssetClassPath.GetAssetName().ToString());
+#else
+                AssetObj->SetStringField(TEXT("class"), AssetData.AssetClass.ToString());
+#endif
                 AssetObj->SetStringField(TEXT("package"), AssetData.PackageName.ToString());
             }
             FoundArray.Add(MakeShared<FJsonValueObject>(AssetObj));
@@ -179,11 +199,16 @@ TSharedPtr<FJsonObject> FUnrealMCPAssetCommands::HandleGetAssetInfo(const TShare
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetStringField(TEXT("path"), AssetPath);
     Result->SetStringField(TEXT("name"), AssetData.AssetName.ToString());
+#if ENGINE_MAJOR_VERSION >= 5
     Result->SetStringField(TEXT("class"), AssetData.AssetClassPath.GetAssetName().ToString());
+#else
+    Result->SetStringField(TEXT("class"), AssetData.AssetClass.ToString());
+#endif
     Result->SetStringField(TEXT("package"), AssetData.PackageName.ToString());
 
     // Add tags
     TArray<TSharedPtr<FJsonValue>> TagArray;
+#if ENGINE_MAJOR_VERSION >= 5
     for (const TPair<FName, FAssetTagValueRef>& Tag : AssetData.TagsAndValues)
     {
         TSharedPtr<FJsonObject> TagObj = MakeShared<FJsonObject>();
@@ -191,6 +216,15 @@ TSharedPtr<FJsonObject> FUnrealMCPAssetCommands::HandleGetAssetInfo(const TShare
         TagObj->SetStringField(TEXT("value"), Tag.Value.AsString());
         TagArray.Add(MakeShared<FJsonValueObject>(TagObj));
     }
+#else
+    for (const TPair<FName, FString>& Tag : AssetData.TagsAndValues)
+    {
+        TSharedPtr<FJsonObject> TagObj = MakeShared<FJsonObject>();
+        TagObj->SetStringField(TEXT("key"), Tag.Key.ToString());
+        TagObj->SetStringField(TEXT("value"), Tag.Value);
+        TagArray.Add(MakeShared<FJsonValueObject>(TagObj));
+    }
+#endif
     Result->SetArrayField(TEXT("tags"), TagArray);
 
     return Result;

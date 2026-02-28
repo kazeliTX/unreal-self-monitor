@@ -17,10 +17,16 @@
 #include "Camera/CameraActor.h"
 #include "Components/StaticMeshComponent.h"
 #include "EditorSubsystem.h"
+#if ENGINE_MAJOR_VERSION >= 5
 #include "Subsystems/EditorActorSubsystem.h"
+#endif
 #include "Engine/Blueprint.h"
 #include "Engine/BlueprintGeneratedClass.h"
+#if ENGINE_MAJOR_VERSION >= 5
 #include "Engine/WorldSettings.h"
+#else
+#include "GameFramework/WorldSettings.h"
+#endif
 #include "GameFramework/GameModeBase.h"
 #include "ActorEditorUtils.h"
 
@@ -744,21 +750,32 @@ TSharedPtr<FJsonObject> FUnrealMCPEditorCommands::HandleDuplicateActor(const TSh
             FString::Printf(TEXT("Actor not found: %s"), *ActorName));
     }
 
+#if ENGINE_MAJOR_VERSION >= 5
     // Use EditorActorSubsystem for clean duplication
     UEditorActorSubsystem* EdActorSub = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
     if (!EdActorSub)
     {
         return FUnrealMCPCommonUtils::CreateErrorResponse(TEXT("Failed to get EditorActorSubsystem"));
     }
-
     TArray<AActor*> ToDuplicate = { SourceActor };
     TArray<AActor*> Duplicated = EdActorSub->DuplicateActors(ToDuplicate);
     if (Duplicated.Num() == 0 || !Duplicated[0])
     {
         return FUnrealMCPCommonUtils::CreateErrorResponse(TEXT("Failed to duplicate actor"));
     }
-
     AActor* NewActor = Duplicated[0];
+#else
+    // UE4: select actor and use edactDuplicateSelected
+    GEditor->SelectNone(false, true);
+    GEditor->SelectActor(SourceActor, true, true);
+    GEditor->edactDuplicateSelected(SourceActor->GetLevel(), false);
+    USelection* Selection = GEditor->GetSelectedActors();
+    AActor* NewActor = Cast<AActor>(Selection->GetTop(AActor::StaticClass()));
+    if (!NewActor)
+    {
+        return FUnrealMCPCommonUtils::CreateErrorResponse(TEXT("Failed to duplicate actor"));
+    }
+#endif
 
     // Optional: set offset position
     if (Params->HasField(TEXT("location")))
