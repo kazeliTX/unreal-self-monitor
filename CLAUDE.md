@@ -20,6 +20,7 @@
 2. **禁止记录第三方项目名称**：用 `<ue4_project>`、`<target_project>` 等语义占位符替代
    - .uproject 文件名 → `<project>.uproject`
 3. **例外**：`.claude/settings.local.json` 等功能性配置文件需要真实路径，但已在 `.gitignore` 中排除
+4. **Git 提交前必须检查**：`git diff --staged` 或 `git show` 确认暂存内容不含敏感信息后再执行 `git commit`
 
 ---
 
