@@ -96,11 +96,11 @@ engine_path, _ = winreg.QueryValueEx(key, "InstalledDirectory")
 ═══════════════════════════════════════
 UnrealMCP 安装兼容性报告
 ═══════════════════════════════════════
-工程路径    : E:\kazeli_KAZELI-PC0_S1_2\NZMobile
+工程路径    : <project_root>/NZMobile
 .uproject   : NZM.uproject
 引擎类型    : 源码编译（EngineAssociation=""）
 引擎版本    : UE 4.24.2
-引擎路径    : E:\kazeli_KAZELI-PC0_S1_2\Engine
+引擎路径    : <project_root>/Engine
 
 ──────────────────────────────────────
 兼容性检查
@@ -116,11 +116,11 @@ UnrealMCP 安装兼容性报告
 ──────────────────────────────────────
 安装动作预览
 ──────────────────────────────────────
-① 复制插件  → E:\...\NZMobile\Plugins\UnrealMCP\
+① 复制插件  → <project_root>/NZMobile/Plugins/UnrealMCP/
 ② 修补      → NZM.uproject（注入 UnrealMCP 插件引用）
 ③ 生成 mcp.json → [由用户指定 MCP client]
 ④ 重新生成 VS 项目文件
-   → E:\kazeli_KAZELI-PC0_S1_2\GenerateProjectFiles.bat NZM.uproject
+   → <project_root>/GenerateProjectFiles.bat NZM.uproject
 
 ⚠️ 注意：安装后需要在 Visual Studio 中重新编译插件
 ═══════════════════════════════════════
@@ -136,9 +136,9 @@ UnrealMCP 安装兼容性报告
 
 ```bash
 python Python/scripts/install.py \
-  "E:/kazeli_KAZELI-PC0_S1_2/NZMobile/NZM.uproject" \
+  "<project_root>/NZMobile/NZM.uproject" \
   --mcp-client claude \
-  --engine-root "E:/kazeli_KAZELI-PC0_S1_2"
+  --engine-root "<project_root>"
 ```
 
 安装脚本将自动：
@@ -177,8 +177,8 @@ print('Patched.')
 "
 
 # 3. 生成 VS 项目文件（源码编译工程）
-"E:/kazeli_KAZELI-PC0_S1_2/GenerateProjectFiles.bat" \
-  "E:/kazeli_KAZELI-PC0_S1_2/NZMobile/NZM.uproject"
+"<project_root>/GenerateProjectFiles.bat" \
+  "<project_root>/NZMobile/NZM.uproject"
 
 # 4. 生成 mcp.json
 python -c "
@@ -197,9 +197,9 @@ print('mcp.json written.')
 
 ```bash
 # 编译验证（UE4 源码编译工程）
-"E:/kazeli_KAZELI-PC0_S1_2/Engine/Build/BatchFiles/Build.bat" \
+"<project_root>/Engine/Build/BatchFiles/Build.bat" \
   NZMEditor Win64 Development \
-  "E:/kazeli_KAZELI-PC0_S1_2/NZMobile/NZM.uproject"
+  "<project_root>/NZMobile/NZM.uproject"
 
 # 运行时验证（编辑器打开后）
 python Python/scripts/debug_runner.py --smoke-test
