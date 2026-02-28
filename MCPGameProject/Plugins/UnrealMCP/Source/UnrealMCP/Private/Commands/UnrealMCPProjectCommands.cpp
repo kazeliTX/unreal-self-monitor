@@ -1,5 +1,6 @@
 #include "Commands/UnrealMCPProjectCommands.h"
 #include "Commands/UnrealMCPCommonUtils.h"
+#include "UnrealMCPCompat.h"
 #include "GameFramework/InputSettings.h"
 #include "Editor.h"
 #include "EditorAssetLibrary.h"
@@ -19,6 +20,11 @@ void FUnrealMCPProjectCommands::RegisterCommands(FMCPCommandRegistry& Registry)
         [this](const TSharedPtr<FJsonObject>& P) { return HandleCreateInputMapping(P); });
     Registry.RegisterCommand(TEXT("run_console_command"),
         [this](const TSharedPtr<FJsonObject>& P) { return HandleRunConsoleCommand(P); });
+    Registry.RegisterCommand(TEXT("get_project_settings"),
+        [this](const TSharedPtr<FJsonObject>& P) { return HandleGetProjectSettings(P); });
+
+#if MCP_ENHANCED_INPUT_SUPPORTED
+    // Enhanced Input commands are only available on UE5 (UInputAction / UInputMappingContext)
     Registry.RegisterCommand(TEXT("create_input_action"),
         [this](const TSharedPtr<FJsonObject>& P) { return HandleCreateInputAction(P); });
     Registry.RegisterCommand(TEXT("create_input_mapping_context"),
@@ -27,8 +33,7 @@ void FUnrealMCPProjectCommands::RegisterCommands(FMCPCommandRegistry& Registry)
         [this](const TSharedPtr<FJsonObject>& P) { return HandleAddInputMapping(P); });
     Registry.RegisterCommand(TEXT("set_input_action_type"),
         [this](const TSharedPtr<FJsonObject>& P) { return HandleSetInputActionType(P); });
-    Registry.RegisterCommand(TEXT("get_project_settings"),
-        [this](const TSharedPtr<FJsonObject>& P) { return HandleGetProjectSettings(P); });
+#endif
 }
 
 TSharedPtr<FJsonObject> FUnrealMCPProjectCommands::HandleCreateInputMapping(const TSharedPtr<FJsonObject>& Params)
@@ -108,10 +113,13 @@ TSharedPtr<FJsonObject> FUnrealMCPProjectCommands::HandleRunConsoleCommand(const
 }
 
 // ---------------------------------------------------------------------------
-// create_input_action  (Enhanced Input)
-// Params: name, path (optional, default /Game/Input/Actions/)
-// Requires EnhancedInput module and UInputAction class
+// Enhanced Input commands — UE5 only (UInputAction / UInputMappingContext)
+// On UE4 these handlers are compiled as stubs that return a clear error.
 // ---------------------------------------------------------------------------
+#if MCP_ENHANCED_INPUT_SUPPORTED
+
+// create_input_action
+// Params: name, path (optional, default /Game/Input/Actions/)
 TSharedPtr<FJsonObject> FUnrealMCPProjectCommands::HandleCreateInputAction(const TSharedPtr<FJsonObject>& Params)
 {
     FString ActionName;
@@ -277,6 +285,22 @@ TSharedPtr<FJsonObject> FUnrealMCPProjectCommands::HandleSetInputActionType(cons
     Result->SetStringField(TEXT("value_type"), ValueType);
     return Result;
 }
+
+#else  // !MCP_ENHANCED_INPUT_SUPPORTED
+
+// Stub implementations for UE4: satisfy the linker (declarations exist in .h),
+// and return a clear error if somehow invoked.
+static TSharedPtr<FJsonObject> EnhancedInputNotSupported()
+{
+    return FUnrealMCPCommonUtils::CreateErrorResponse(
+        TEXT("Enhanced Input commands require UE5+. This command is not available on UE4."));
+}
+TSharedPtr<FJsonObject> FUnrealMCPProjectCommands::HandleCreateInputAction(const TSharedPtr<FJsonObject>&)         { return EnhancedInputNotSupported(); }
+TSharedPtr<FJsonObject> FUnrealMCPProjectCommands::HandleCreateInputMappingContext(const TSharedPtr<FJsonObject>&) { return EnhancedInputNotSupported(); }
+TSharedPtr<FJsonObject> FUnrealMCPProjectCommands::HandleAddInputMapping(const TSharedPtr<FJsonObject>&)           { return EnhancedInputNotSupported(); }
+TSharedPtr<FJsonObject> FUnrealMCPProjectCommands::HandleSetInputActionType(const TSharedPtr<FJsonObject>&)        { return EnhancedInputNotSupported(); }
+
+#endif // MCP_ENHANCED_INPUT_SUPPORTED
 
 // ---------------------------------------------------------------------------
 // get_project_settings

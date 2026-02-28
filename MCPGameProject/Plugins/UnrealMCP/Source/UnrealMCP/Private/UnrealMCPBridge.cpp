@@ -61,8 +61,9 @@
 #include "Commands/UnrealMCPLevelCommands.h"
 #include "Commands/UnrealMCPAssetCommands.h"
 #include "Commands/UnrealMCPDiagnosticsCommands.h"
-// Settings and editor menu
+// Settings, editor menu, and cross-version compat macros
 #include "UnrealMCPSettings.h"
+#include "UnrealMCPCompat.h"
 #include "ToolMenus.h"
 
 #define LOCTEXT_NAMESPACE "UnrealMCP"
@@ -168,7 +169,7 @@ void UUnrealMCPBridge::RegisterMenus()
         "ToggleMCPServer",
         LOCTEXT("ToggleMCPServer", "MCP Server"),
         LOCTEXT("ToggleMCPServerTip", "Start or stop the MCP TCP server (port 55557). Configure in Project Settings > Plugins > UnrealMCP."),
-        FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.Toolbar.Settings"),
+        FSlateIcon(MCP_STYLE_NAME, "Icons.Toolbar.Settings"),
         FUIAction(
             FExecuteAction::CreateUObject(this, &UUnrealMCPBridge::ToggleServer),
             FCanExecuteAction(),

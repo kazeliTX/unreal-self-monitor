@@ -7,21 +7,20 @@ public class UnrealMCP : ModuleRules
 	public UnrealMCP(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
-		// Use IWYUSupport instead of the deprecated bEnforceIWYU in UE5.5
-		IWYUSupport = IWYUSupport.Full;
+
+		// IWYUSupport was introduced in UE5.5 and replaces the deprecated bEnforceIWYU.
+		// We set neither so the same Build.cs compiles on both UE4 and UE5.
 
 		PublicIncludePaths.AddRange(
 			new string[] {
-				// ... add public include paths required here ...
 			}
 		);
-		
+
 		PrivateIncludePaths.AddRange(
 			new string[] {
-				// ... add other private include paths required here ...
 			}
 		);
-		
+
 		PublicDependencyModuleNames.AddRange(
 			new string[]
 			{
@@ -37,7 +36,7 @@ public class UnrealMCP : ModuleRules
 				"DeveloperSettings"
 			}
 		);
-		
+
 		PrivateDependencyModuleNames.AddRange(
 			new string[]
 			{
@@ -58,7 +57,7 @@ public class UnrealMCP : ModuleRules
 				"LiveCoding"        // For hot-reload / compile status queries
 			}
 		);
-		
+
 		if (Target.bBuildEditor == true)
 		{
 			PrivateDependencyModuleNames.AddRange(
@@ -66,17 +65,21 @@ public class UnrealMCP : ModuleRules
 				{
 					"PropertyEditor",      // For widget property editing
 					"ToolMenus",           // For editor UI
-					"BlueprintEditorLibrary", // For Blueprint utilities
-					"UMGEditor"           // For WidgetBlueprint.h and other UMG editor functionality
+					"UMGEditor"            // For WidgetBlueprint.h and other UMG editor functionality
 				}
 			);
+
+			// BlueprintEditorLibrary is a UE5-only module.
+			if (Target.Version.MajorVersion >= 5)
+			{
+				PrivateDependencyModuleNames.Add("BlueprintEditorLibrary");
+			}
 		}
-		
+
 		DynamicallyLoadedModuleNames.AddRange(
 			new string[]
 			{
-				// ... add any modules that your module loads dynamically here ...
 			}
 		);
 	}
-} 
+}
