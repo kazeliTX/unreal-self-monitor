@@ -96,8 +96,8 @@ engine_path, _ = winreg.QueryValueEx(key, "InstalledDirectory")
 ═══════════════════════════════════════
 UnrealMCP 安装兼容性报告
 ═══════════════════════════════════════
-工程路径    : <project_root>/NZMobile
-.uproject   : NZM.uproject
+工程路径    : <project_root>/<ue4_project>
+.uproject   : <project>.uproject
 引擎类型    : 源码编译（EngineAssociation=""）
 引擎版本    : UE 4.24.2
 引擎路径    : <project_root>/Engine
@@ -116,11 +116,11 @@ UnrealMCP 安装兼容性报告
 ──────────────────────────────────────
 安装动作预览
 ──────────────────────────────────────
-① 复制插件  → <project_root>/NZMobile/Plugins/UnrealMCP/
-② 修补      → NZM.uproject（注入 UnrealMCP 插件引用）
+① 复制插件  → <project_root>/<ue4_project>/Plugins/UnrealMCP/
+② 修补      → <project>.uproject（注入 UnrealMCP 插件引用）
 ③ 生成 mcp.json → [由用户指定 MCP client]
 ④ 重新生成 VS 项目文件
-   → <project_root>/GenerateProjectFiles.bat NZM.uproject
+   → <project_root>/GenerateProjectFiles.bat <project>.uproject
 
 ⚠️ 注意：安装后需要在 Visual Studio 中重新编译插件
 ═══════════════════════════════════════
@@ -132,11 +132,11 @@ UnrealMCP 安装兼容性报告
 
 根据兼容性报告，定制 install.py 调用参数或手动步骤清单：
 
-### UE4 源码编译工程（如 NZMobile）
+### UE4 源码编译工程（如 UE4 源码编译工程）
 
 ```bash
 python Python/scripts/install.py \
-  "<project_root>/NZMobile/NZM.uproject" \
+  "<project_root>/<ue4_project>/<project>.uproject" \
   --mcp-client claude \
   --engine-root "<project_root>"
 ```
@@ -178,7 +178,7 @@ print('Patched.')
 
 # 3. 生成 VS 项目文件（源码编译工程）
 "<project_root>/GenerateProjectFiles.bat" \
-  "<project_root>/NZMobile/NZM.uproject"
+  "<project_root>/<ue4_project>/<project>.uproject"
 
 # 4. 生成 mcp.json
 python -c "
@@ -198,8 +198,8 @@ print('mcp.json written.')
 ```bash
 # 编译验证（UE4 源码编译工程）
 "<project_root>/Engine/Build/BatchFiles/Build.bat" \
-  NZMEditor Win64 Development \
-  "<project_root>/NZMobile/NZM.uproject"
+  <ProjectName>Editor Win64 Development \
+  "<project_root>/<ue4_project>/<project>.uproject"
 
 # 运行时验证（编辑器打开后）
 python Python/scripts/debug_runner.py --smoke-test
@@ -224,4 +224,4 @@ python Python/scripts/debug_runner.py --smoke-test
 1. **安装前先备份 .uproject** — 修补操作会改写原文件
 2. **源码编译工程必须重新生成 VS 工程文件** — 否则新插件不会被 UBT 识别
 3. **UE4 下 Enhanced Input 相关 MCP 命令不可用** — 使用 `get_capabilities` 查看实际可用命令
-4. **首次编译时间较长** — UE4 大型项目（如 NZMobile）可能需要 10–30 分钟
+4. **首次编译时间较长** — UE4 大型项目（如 UE4 源码编译工程）可能需要 10–30 分钟
