@@ -166,15 +166,15 @@ void UUnrealMCPBridge::Deinitialize()
     }
 }
 
-// Register the "Tools > UnrealMCP" menu section
+// Register the "Tools > UnrealMCP" menu section AND a Level Editor toolbar button
 void UUnrealMCPBridge::RegisterMenus()
 {
     // All entries registered here are owned by this subsystem and auto-removed on Deinitialize
     FToolMenuOwnerScoped OwnerScoped(this);
 
+    // --- Tools menu entry (keep for discoverability) ---
     UToolMenu* Menu = UToolMenus::Get()->ExtendMenu("MainFrame.MainMenu.Tools");
     FToolMenuSection& Section = Menu->AddSection("UnrealMCPSection", LOCTEXT("UnrealMCPHeading", "UnrealMCP"));
-
     Section.AddMenuEntry(
         "ToggleMCPServer",
         LOCTEXT("ToggleMCPServer", "MCP Server"),
@@ -187,6 +187,22 @@ void UUnrealMCPBridge::RegisterMenus()
         ),
         EUserInterfaceActionType::ToggleButton
     );
+
+    // --- Level Editor toolbar button (always visible, shows ON/OFF state) ---
+    UToolMenu* Toolbar = UToolMenus::Get()->ExtendMenu("LevelEditor.LevelEditorToolBar");
+    FToolMenuSection& ToolbarSection = Toolbar->AddSection("UnrealMCPToolbarSection");
+    ToolbarSection.AddEntry(FToolMenuEntry::InitToolBarButton(
+        "ToggleMCPServerToolbar",
+        FUIAction(
+            FExecuteAction::CreateUObject(this, &UUnrealMCPBridge::ToggleServer),
+            FCanExecuteAction(),
+            FIsActionChecked::CreateUObject(this, &UUnrealMCPBridge::IsRunning)
+        ),
+        LOCTEXT("MCPToolbarLabel", "MCP"),
+        LOCTEXT("MCPToolbarTip", "Start / Stop MCP Server (port 55557)\nGreen = running, use Tools > UnrealMCP to configure."),
+        FSlateIcon(MCP_STYLE_NAME, "Icons.Toolbar.Settings"),
+        EUserInterfaceActionType::ToggleButton
+    ));
 }
 
 // Toggle the MCP server on / off
