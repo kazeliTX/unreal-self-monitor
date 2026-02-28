@@ -1,7 +1,22 @@
 {
   "permissions": {
     "allow": [
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(python:*)",
+      "Bash(uv:*)"
+    ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:/Users/kazeli/Desktop/unreal-mcp-main/Python/scripts/session_end_reminder.py\"",
+            "timeout": 30
+          }
+        ]
+      }
     ]
   }
 }
