@@ -83,19 +83,25 @@ uint32 FMCPServerRunnable::Run()
                             FString CommandType;
                             if (JsonObject->TryGetStringField(TEXT("type"), CommandType))
                             {
-                                // Execute command
-                                FString Response = Bridge->ExecuteCommand(CommandType, JsonObject->GetObjectField(TEXT("params")));
-                                
+                                TSharedPtr<FJsonObject> Params = JsonObject->HasField(TEXT("params"))
+                                    ? JsonObject->GetObjectField(TEXT("params"))
+                                    : MakeShared<FJsonObject>();
+
+                                // ExecuteCommand already dispatches to game thread internally
+                                // via TPromise/TFuture+AsyncTask, so call it directly here.
+                                FString Response = Bridge->ExecuteCommand(CommandType, Params);
+
                                 // Log response for debugging
                                 UE_LOG(LogTemp, Display, TEXT("MCPServerRunnable: Sending response: %s"), *Response);
-                                
+
                                 // Send response
                                 int32 BytesSent = 0;
                                 if (!ClientSocket->Send((uint8*)TCHAR_TO_UTF8(*Response), Response.Len(), BytesSent))
                                 {
                                     UE_LOG(LogTemp, Warning, TEXT("MCPServerRunnable: Failed to send response"));
                                 }
-                                else {
+                                else
+                                {
                                     UE_LOG(LogTemp, Display, TEXT("MCPServerRunnable: Response sent successfully, bytes: %d"), BytesSent);
                                 }
                             }
