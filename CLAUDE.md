@@ -167,7 +167,7 @@ Pillow>=10.0.0    # 可选：截图处理
 | Phase 2A | ✅ | DiagnosticsCommands + log/diagnostics/compile/system Python 工具 |
 | Phase 2B | ✅ | TestCommands（validate_blueprint / run_level_validation） |
 | Phase 2C 材质 | ✅ | MaterialCommands（6条命令，实战验证）|
-| Phase 2D | ⏳ | 启动控制（见 `References/Plans/Phase2D_启动控制.md`） |
+| Phase 2D | ✅ | 启动控制：离线引擎路径探测 / PowerShell kill / PackageRestoreData 清理 / PID 文件 |
 | 可移植性 | ✅ | install.py / UnrealMCPCompat.h / UE4/5 兼容 / 编辑器菜单开关 |
 | UE4.24 验证 | ✅ | 自编译项目成功编译 |
 
